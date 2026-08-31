@@ -17,7 +17,7 @@ spec:
     spec:
       initContainers:
         - name: init-db
-          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.1.0
+          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.2.0
           command: ["python", "-m", "app.init_db"]
           env:
             - name: DATABASE_URL
@@ -27,7 +27,7 @@ spec:
                   key: DATABASE_URL
       containers:
         - name: kps-tasks-api
-          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.1.0
+          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.2.0
           ports:
             - containerPort: 8000
           env:
@@ -42,7 +42,7 @@ spec:
                   name: kps-tasks-api-config
                   key: APP_ENV
             - name: APP_VERSION
-              value: "1.1.0"
+              value: "1.2.0"
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
