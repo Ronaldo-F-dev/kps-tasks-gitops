@@ -1,0 +1,12 @@
+=== reponse HTTP du serveur ArgoCD (interface web) ===
+HTTP status: 200
+Serveur: 127.0.0.1:30843
+
+=== version serveur (confirme ArgoCD repond bien, pas un service generique) ===
+{"Version":"v3.5.2"}
+
+=== connexion CLI reussie avec le compte admin ===
+Logged In: true
+Username: admin
+Issuer: argocd
+Groups: 

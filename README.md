@@ -8,7 +8,7 @@ Ce dépôt est volontairement séparé du dépôt applicatif ([`devops-prj3`](ht
 
 - `apps/kps-tasks-api/` — manifestes Kubernetes de base (Namespace, Deployment, Service, ConfigMap, Secret d'exemple, PostgreSQL)
 - `environments/dev/` — surcouches spécifiques à l'environnement (à venir)
-- `docs/` — documentation du fonctionnement GitOps, de l'installation ArgoCD, de la stratégie blue/green
+- `docs/` — documentation du fonctionnement GitOps, de l'installation ArgoCD, des questions intermédiaires, de la stratégie blue/green
 - `evidence/` — preuves capturées (pods, synchronisation, drift, bascule blue/green)
 
 ## Règle d'or
