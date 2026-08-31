@@ -1,0 +1,18 @@
+NAME                                                READY   STATUS    RESTARTS      AGE   IP           NODE      NOMINATED NODE   READINESS GATES
+argocd-application-controller-0                     1/1     Running   0             22m   10.42.0.30   kps-vps   <none>           <none>
+argocd-applicationset-controller-5959f79d67-g2sxk   1/1     Running   0             22m   10.42.0.26   kps-vps   <none>           <none>
+argocd-dex-server-6f84fd5569-pgftx                  1/1     Running   2 (22m ago)   22m   10.42.0.27   kps-vps   <none>           <none>
+argocd-notifications-controller-5856884878-b9wnf    1/1     Running   0             22m   10.42.0.25   kps-vps   <none>           <none>
+argocd-redis-86846d5986-t2nk2                       1/1     Running   0             22m   10.42.0.28   kps-vps   <none>           <none>
+argocd-repo-server-7d44c57bc8-8mkzx                 1/1     Running   0             22m   10.42.0.31   kps-vps   <none>           <none>
+argocd-server-8567f6cc96-m5nz9                      1/1     Running   0             22m   10.42.0.29   kps-vps   <none>           <none>
+---
+NAME                                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+argocd-applicationset-controller          ClusterIP   10.43.212.78    <none>        7000/TCP,8080/TCP            22m
+argocd-dex-server                         ClusterIP   10.43.180.4     <none>        5556/TCP,5557/TCP,5558/TCP   22m
+argocd-metrics                            ClusterIP   10.43.108.215   <none>        8082/TCP                     22m
+argocd-notifications-controller-metrics   ClusterIP   10.43.171.228   <none>        9001/TCP                     22m
+argocd-redis                              ClusterIP   10.43.43.170    <none>        6379/TCP                     22m
+argocd-repo-server                        ClusterIP   10.43.254.115   <none>        8081/TCP,8084/TCP            22m
+argocd-server                             NodePort    10.43.237.62    <none>        80:30880/TCP,443:30843/TCP   22m
+argocd-server-metrics                     ClusterIP   10.43.153.146   <none>        8083/TCP                     22m
