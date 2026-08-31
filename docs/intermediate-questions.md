@@ -47,3 +47,29 @@ Parce que ces trois informations définissent, à elles seules, tout le périmè
 ### 31. Quelle est la différence entre créer une ressource avec ArgoCD et avec `kubectl apply` ?
 
 Le résultat immédiat est identique (les mêmes objets Kubernetes créés), mais pas le mécanisme derrière : `kubectl apply` est un acte ponctuel, exécuté par un humain ou un pipeline, qui ne laisse aucune garantie que l'état créé perdure. Une ressource créée par ArgoCD reste sous sa surveillance continue — si elle est modifiée ou supprimée ensuite en dehors de Git, ArgoCD le détecte (`OutOfSync`) au lieu de l'ignorer silencieusement.
+
+## Jour 3 — Synchronisation automatisée, changement de version et drift
+
+### 42. Quelle est la différence entre synchronisation manuelle et automatisée ?
+
+En mode manuel, ArgoCD détecte un écart (`OutOfSync`) mais attend qu'un humain déclenche `argocd app sync`. En mode automatisé, dès qu'ArgoCD détecte que Git a changé, il synchronise seul, sans attendre. Nuance importante testée en pratique : le mode automatisé ne surveille par défaut que "Git a-t-il changé ?" — pas "le cluster a-t-il été modifié directement ?". Cette seconde surveillance est un réglage séparé, `self-heal` (question 46 et suivante).
+
+### 43. Qu'est-ce qu'un drift ?
+
+Un écart entre l'état désiré (Git) et l'état réel (cluster) causé par une modification faite **directement** dans le cluster, en dehors de tout commit Git. Techniquement, ArgoCD l'affiche exactement comme n'importe quel autre `OutOfSync` — le mot "drift" désigne la cause (une main humaine dans le cluster), pas un état technique différent.
+
+### 44. Pourquoi modifier directement le cluster est-il risqué ?
+
+Parce que ce changement devient invisible pour toute personne qui ne consulte que Git — qui est censé être la source de vérité. Le risque n'est pas seulement "ArgoCD va s'en apercevoir" : c'est que, en attendant, l'équipe entière travaille avec une vision fausse de ce qui tourne réellement en production, et qu'un prochain déploiement normal (`argocd app sync`) effacera silencieusement ce changement fait dans l'urgence, sans que personne ne comprenne pourquoi.
+
+### 45. Comment ArgoCD détecte-t-il un écart ?
+
+L'`application-controller` (un des composants installés au Jour 1) interroge en continu l'API Kubernetes pour connaître l'état réel de chaque ressource qu'il gère, et le compare au contenu du dépôt Git à la révision suivie. La comparaison se fait objet par objet, champ par champ — c'est pour ça qu'un seul `Deployment` peut être `OutOfSync` pendant que tout le reste de l'application reste `Synced`.
+
+### 46. Que se passe-t-il si Git contient une mauvaise configuration ?
+
+ArgoCD l'applique quand même — il ne juge pas si le contenu de Git est "correct", seulement s'il est appliqué fidèlement. Une mauvaise configuration committée par erreur (mauvais tag d'image, mauvais port) sera synchronisée exactement comme une bonne, et l'application passera potentiellement en `Degraded`. C'est précisément pour ça que la revue avant fusion (Pull Request) sur le dépôt GitOps compte davantage que sur un dépôt de code habituel : ArgoCD n'est pas un filet de sécurité contre une erreur humaine dans Git, il en est au contraire l'exécutant fidèle.
+
+### 47. Pourquoi le dépôt GitOps doit-il être protégé ?
+
+Parce qu'y committer directement revient, de fait, à déployer en production — sans les vérifications habituelles (tests, revue) qu'on exigerait pour un changement de code. Une branche protégée (revue obligatoire avant fusion sur `main`) rétablit ce garde-fou : le dépôt GitOps a beau être "juste des fichiers YAML", son contenu a un pouvoir d'action direct et immédiat sur un système réel.

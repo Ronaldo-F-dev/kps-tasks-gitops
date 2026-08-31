@@ -1,0 +1,23 @@
+Name:               argocd/kps-tasks-api-dev
+Project:            default
+Server:             https://kubernetes.default.svc
+Namespace:          kps-tasks
+URL:                https://localhost:30843/applications/kps-tasks-api-dev
+Source:
+- Repo:             https://github.com/Ronaldo-F-dev/kps-tasks-gitops.git
+  Target:           
+  Path:             apps/kps-tasks-api
+SyncWindow:         Sync Allowed
+Sync Policy:        Automated
+Sync Status:        Synced to  (c5b0b44)
+Health Status:      Healthy
+
+GROUP  KIND                   NAMESPACE  NAME                  STATUS   HEALTH   HOOK  MESSAGE
+       Namespace              kps-tasks  kps-tasks             Running  Synced         namespace/kps-tasks unchanged
+       ConfigMap              kps-tasks  kps-tasks-api-config  Synced                  configmap/kps-tasks-api-config unchanged
+       PersistentVolumeClaim  kps-tasks  postgres-pvc          Synced   Healthy        persistentvolumeclaim/postgres-pvc unchanged
+       Service                kps-tasks  kps-tasks-api         Synced   Healthy        service/kps-tasks-api unchanged
+       Service                kps-tasks  postgres              Synced   Healthy        service/postgres unchanged
+apps   Deployment             kps-tasks  postgres              Synced   Healthy        deployment.apps/postgres unchanged
+apps   Deployment             kps-tasks  kps-tasks-api         Synced   Healthy        deployment.apps/kps-tasks-api configured
+       Namespace                         kps-tasks             Synced                  
