@@ -74,6 +74,32 @@ ArgoCD l'applique quand même — il n'a aucun moyen de juger si une configurati
 
 Parce qu'il est devenu, dans ce modèle, l'équivalent direct de la production : n'importe quel commit fusionné dessus finit par tourner réellement sur le cluster, automatiquement. Sans protection de branche (revue obligatoire, restriction de qui peut fusionner), le dépôt GitOps serait une porte d'entrée directe vers la production, sans le moindre contrôle humain — bien plus sensible qu'un dépôt de code applicatif classique.
 
+## Jour 4 — Blue/green
+
+### 58. Qu'est-ce qu'un déploiement blue/green ?
+
+Une stratégie où deux versions complètes d'une application tournent en même temps, mais où une seule ("active") reçoit réellement le trafic des utilisateurs. Basculer d'une version à l'autre revient à changer où le trafic est dirigé, pas à redéployer quoi que ce soit — ce qui rend la bascule quasi instantanée et le retour en arrière tout aussi rapide.
+
+### 59. Pourquoi garder deux versions en parallèle ?
+
+Parce que la nouvelle version (`green`) peut être entièrement démarrée, vérifiée `Healthy`, et même testée manuellement (en la contactant directement par son IP de pod, sans passer par le Service public) **avant** de lui envoyer le moindre trafic réel. Le risque du changement est ainsi séparé en deux étapes indépendantes : "est-ce que ça démarre correctement ?" (déjà vérifiable sans impact), puis "est-ce qu'on lui fait confiance pour de vrai ?" (la bascule elle-même).
+
+### 60. Comment le Service choisit-il la version active ?
+
+Via son `selector`, qui cible des labels de pods, pas des noms de Deployment. Les pods `blue` et `green` partagent le label `app: kps-tasks-api` mais diffèrent sur le label `version` — le Service ne route que vers les pods dont le `version` correspond à celui inscrit dans son `selector`. Changer ce `selector` change instantanément la destination du trafic, sans toucher aux Deployments.
+
+### 61. Quelle est la différence entre un rollback et un basculement blue/green ?
+
+Un rollback Kubernetes classique (`kubectl rollout undo`, Projet 5) redémarre des pods avec une image antérieure — ça prend le temps d'un nouveau rollout, avec une fenêtre où les anciens et nouveaux pods coexistent temporairement. Un basculement blue/green revient à une version antérieure en changeant juste un `selector` — les pods de l'ancienne version tournent déjà, prêts, depuis le début. Le blue/green est donc un rollback quasi instantané, au prix de faire tourner deux versions en permanence plutôt qu'une seule.
+
+### 62. Quels sont les risques si la base de données change entre blue et green ?
+
+Les deux versions, dans ce projet, partagent la **même** base PostgreSQL. Si `green` introduisait une migration de schéma incompatible avec le code de `blue` (une colonne renommée ou supprimée, par exemple), les deux versions ne pourraient plus fonctionner correctement en même temps — activer `green` casserait potentiellement `blue` si jamais on devait y revenir. Une vraie stratégie de migration de schéma doit rester rétrocompatible tant que les deux versions applicatives peuvent coexister.
+
+### 63. Pourquoi ce modèle reste-t-il manuel ici ?
+
+Parce que l'objectif du Jour 4 est de comprendre le mécanisme de base (labels, sélecteurs, deux Deployments) avant d'y ajouter une couche de décision automatique. Une bascule automatisée demanderait des critères objectifs pour décider quand basculer (tests de charge, taux d'erreur observé, etc.) — une problématique d'observabilité à part entière, explicitement hors périmètre de ce projet (mentionnée comme amélioration possible avant une observabilité complète).
+
 ## Jour 3 — Synchronisation automatisée, changement de version et drift
 
 ### 42. Quelle est la différence entre synchronisation manuelle et automatisée ?

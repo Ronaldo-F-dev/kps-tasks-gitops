@@ -1,0 +1,11 @@
+=== pods ===
+NAME                                   READY   STATUS    RESTARTS   AGE   IP           NODE      NOMINATED NODE   READINESS GATES   LABELS
+kps-tasks-api-blue-749995486d-v8r7k    1/1     Running   0          52s   10.42.0.35   kps-vps   <none>           <none>            app=kps-tasks-api,pod-template-hash=749995486d,version=blue
+kps-tasks-api-green-76dbbd8f48-t9fbz   1/1     Running   0          52s   10.42.0.36   kps-vps   <none>           <none>            app=kps-tasks-api,pod-template-hash=76dbbd8f48,version=green
+postgres-7777774646-tj2nn              1/1     Running   0          13d   10.42.0.22   kps-vps   <none>           <none>            app=postgres,pod-template-hash=7777774646
+=== endpoints (blue actif) ===
+NAME            ENDPOINTS         AGE
+kps-tasks-api   10.42.0.35:8000   13d
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+=== /version ===
+{"name":"KPS Tasks API","version":"1.1.0","environment":"production"}
