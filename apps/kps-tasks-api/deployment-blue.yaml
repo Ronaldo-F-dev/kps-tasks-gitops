@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kps-tasks-api-blue
+  namespace: kps-tasks
+  labels:
+    app: kps-tasks-api
+    version: blue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kps-tasks-api
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: kps-tasks-api
+        version: blue
+    spec:
+      initContainers:
+        - name: init-db
+          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.1.0
+          command: ["python", "-m", "app.init_db"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: kps-tasks-api-secret
+                  key: DATABASE_URL
+      containers:
+        - name: kps-tasks-api
+          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.1.0
+          ports:
+            - containerPort: 8000
+          env:
+            - name: APP_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: kps-tasks-api-config
+                  key: APP_NAME
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: kps-tasks-api-config
+                  key: APP_ENV
+            - name: APP_VERSION
+              value: "1.1.0"
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: kps-tasks-api-config
+                  key: LOG_LEVEL
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: kps-tasks-api-secret
+                  key: DATABASE_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3

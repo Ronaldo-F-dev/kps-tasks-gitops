@@ -1,19 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kps-tasks-api
+  name: kps-tasks-api-green
   namespace: kps-tasks
   labels:
     app: kps-tasks-api
+    version: green
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: kps-tasks-api
+      version: green
   template:
     metadata:
       labels:
         app: kps-tasks-api
+        version: green
     spec:
       initContainers:
         - name: init-db
