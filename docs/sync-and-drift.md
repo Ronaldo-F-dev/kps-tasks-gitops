@@ -1,24 +1,12 @@
-# Changement de version, synchronisation automatisée et drift — Jour 3
+# Synchronisation, changement de version et drift — Jour 3
 
 ## Changement de version depuis Git (tâches 32-37)
 
-Une nouvelle image `v1.2.0` a d'abord été construite côté dépôt applicatif (nouveau tag Git `v1.2.0`, pipeline CI existant, sans aucun changement de processus par rapport au Projet 4). Seule l'étape suivante concerne le GitOps :
+Un nouveau tag `v1.2.0` a été créé sur le dépôt applicatif (build/push automatique via le pipeline CI existant), puis **seul le dépôt GitOps a été modifié** — `apps/kps-tasks-api/app-deployment.yaml`, ligne `image:` et variable `APP_VERSION`, `v1.1.0` → `v1.2.0`. Commit et push sur `kps-tasks-gitops`.
 
-```bash
-# Dans kps-tasks-gitops
-sed -i 's#v1.1.0#v1.2.0#g' apps/kps-tasks-api/app-deployment.yaml
-git commit -am "chore: bump kps-tasks-api to v1.2.0"
-git push
-```
+ArgoCD a détecté l'écart automatiquement (`Sync Status: OutOfSync from (c5b0b44)`) — seul l'objet `Deployment kps-tasks-api` est passé `OutOfSync`, tout le reste (ConfigMap, Services, PVC, Deployment postgres) est resté `Synced`, preuve qu'ArgoCD ne réévalue pas tout en bloc mais compare objet par objet.
 
-Résultat observé, sans aucune commande Kubernetes :
-
-1. `argocd app get kps-tasks-api-dev` passe de `Synced` à `OutOfSync from (c5b0b44)` — le hash du nouveau commit apparaît immédiatement.
-2. Seul l'objet réellement concerné (`Deployment kps-tasks-api`) est marqué `OutOfSync` — tous les autres objets restent `Synced`, preuve qu'ArgoCD compare précisément chaque ressource, pas l'application dans son ensemble en bloc.
-3. `argocd app sync kps-tasks-api-dev` déclenche le rollout Kubernetes.
-4. `curl .../version` confirme `"version":"1.2.0"`.
-
-Preuve : `evidence/outofsync-detected.txt`.
+Synchronisation manuelle (`argocd app sync kps-tasks-api-dev`) : rollout Kubernetes déclenché, nouveau pod `Running`, `curl /version` confirmé à `1.2.0`. Preuves : `evidence/outofsync-detected.txt`, logs de synchronisation.
 
 ## Synchronisation automatisée (tâche 38)
 
@@ -26,45 +14,31 @@ Preuve : `evidence/outofsync-detected.txt`.
 argocd app set kps-tasks-api-dev --sync-policy automated
 ```
 
-**Décision volontaire prise à ce stade : activer *automated* sans activer *self-heal*.** Ce sont deux réglages distincts, souvent confondus :
+Décision volontaire : **auto-sync activé, `self-heal` laissé désactivé**, pour pouvoir observer séparément la détection et la correction d'un drift (voir plus bas). `--sync-policy automated` seul ne fait qu'une chose : appliquer sans attendre de confirmation humaine un changement **venant de Git**. Il ne surveille pas ce qui se passe dans le cluster en dehors de Git — c'est précisément le rôle de `self-heal` (voir question 42).
 
-| Réglage | Ce qu'il déclenche |
-|---|---|
-| `automated` (seul) | Dès que Git change, ArgoCD synchronise tout seul — plus besoin de taper `argocd app sync`. Ne surveille **pas** activement les changements faits directement dans le cluster. |
-| `automated` + `self-heal` | En plus de ce qui précède, ArgoCD **annule automatiquement** toute modification faite directement dans le cluster, dès qu'il la détecte — sans attendre qu'un humain lance une synchronisation manuelle. |
-
-Ce choix a été fait exprès pour pouvoir observer la tâche suivante (le drift) sans qu'ArgoCD ne le corrige tout seul avant qu'on ait pu l'examiner.
-
-## Provoquer et corriger un drift (tâches 39-41)
-
-**Provoqué** avec une commande `kubectl` directe, sans toucher à Git :
+## Drift volontaire (tâches 39-41)
 
 ```bash
 kubectl scale deployment/kps-tasks-api -n kps-tasks --replicas=2
 ```
 
-**Détecté** par ArgoCD, exactement de la même façon qu'un changement de version au bloc précédent — `OutOfSync`. C'est le point le plus important de ce module : **pour ArgoCD, "Git a changé" et "le cluster a changé" produisent le même signal.** Il n'y a pas de distinction entre "écart voulu, pas encore appliqué" et "écart non voulu, fait en douce" — dans les deux cas, c'est un désaccord entre état désiré et état réel.
+Résultat : deux pods au lieu d'un, alors que le dépôt GitOps dit toujours `replicas: 1`. ArgoCD a signalé `OutOfSync`, avec un diff exact et lisible :
 
 ```bash
 argocd app diff kps-tasks-api-dev
-```
-```
-===== apps/Deployment kps-tasks/kps-tasks-api ======
-201c201
-<   replicas: 2
----
->   replicas: 1
-```
-(`<` = état réel du cluster, `>` = état désiré dans Git)
-
-**Corrigé** en resynchronisant — ce qui, dans ce sens-là, revient à *annuler* le changement manuel plutôt qu'à en appliquer un nouveau :
-
-```bash
-argocd app sync kps-tasks-api-dev
+# < replicas: 2   (état réel)
+# > replicas: 1   (état désiré, Git)
 ```
 
-Résultat : retour à 1 seul pod, `Synced`, `Healthy`. Preuves : `evidence/drift-detected.txt`, `evidence/drift-corrected.txt`.
+**Correction** : `argocd app sync kps-tasks-api-dev` a ramené le cluster à 1 réplica, conforme à Git — pas l'inverse. Preuve : `evidence/drift-detected.txt`.
 
-## Pourquoi ce n'était pas automatique (rappel du choix du bloc précédent)
+## Push vs pull, avec ce qu'on vient de vivre comme exemple
 
-Parce que `self-heal` n'a volontairement pas été activé. Si ça avait été le cas, ArgoCD aurait annulé le `kubectl scale` de lui-même, en quelques secondes, sans qu'on ait eu besoin de taper `argocd app sync` — la correction aurait été aussi automatique que la détection. Les deux comportements sont légitimes ; celui choisi ici sert uniquement à bien séparer "détecter" de "corriger" pour les besoins de la démonstration.
+| | Push (`kubectl apply`, Projets 1-5) | Pull (GitOps, ce projet) |
+|---|---|---|
+| Qui déclenche | Un humain ou un pipeline, depuis l'extérieur | ArgoCD, depuis l'intérieur du cluster |
+| Ce qui s'est passé ici | Le `kubectl scale` du drift était un acte "push" — imposé au cluster sans passer par Git | La correction (`argocd app sync`) est un acte "pull" — ArgoCD est allé chercher l'état désiré dans Git et l'a réappliqué |
+
+Le drift de ce Jour 3 est en réalité une démonstration de ce qui se passe quand on retombe, même une seule fois, dans le réflexe "push" — et pourquoi le modèle pull le rattrape.
+
+Détail complet des réponses conceptuelles ci-dessous.
