@@ -20,7 +20,7 @@ spec:
     spec:
       initContainers:
         - name: init-db
-          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.2.0
+          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v9.9.9-does-not-exist
           command: ["python", "-m", "app.init_db"]
           env:
             - name: DATABASE_URL
@@ -30,7 +30,7 @@ spec:
                   key: DATABASE_URL
       containers:
         - name: kps-tasks-api
-          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v1.2.0
+          image: ghcr.io/ronaldo-f-dev/kps-tasks-api:v9.9.9-does-not-exist
           ports:
             - containerPort: 8000
           env:
